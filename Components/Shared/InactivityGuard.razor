@@ -1,0 +1,131 @@
+@implements IDisposable
+@inject SessionGate Gate
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider Authentication
+
+@if (Label is not null)
+{
+    <p class="session-note @(Urgent ? "is-late" : null)">@Label</p>
+}
+
+@code {
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource? _cancel;
+    private DotNetObjectReference<InactivityGuard>? _reference;
+    private string? Label;
+    private bool Urgent;
+    private DateTimeOffset _lastTouch = DateTimeOffset.MinValue;
+    private int _disposed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _disposed == 1)
+            return;
+
+        _reference = DotNetObjectReference.Create(this);
+        try
+        {
+            await JS.InvokeVoidAsync("klucznik.watchActivity", _reference);
+        }
+        catch (JSException)
+        {
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+
+        _cancel = new CancellationTokenSource();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
+        _ = Loop(_cancel.Token);
+    }
+
+    private async Task Loop(CancellationToken token)
+    {
+        try
+        {
+            await CheckAsync();
+            while (await _timer!.WaitForNextTickAsync(token))
+                await CheckAsync();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    private async Task CheckAsync()
+    {
+        if (_disposed == 1)
+            return;
+
+        var state = await Authentication.GetAuthenticationStateAsync();
+        var now = DateTimeOffset.UtcNow;
+        var snapshot = await Gate.EvaluateAsync(state.User, touch: false, now);
+
+        if (snapshot.Verdict is SessionVerdict.Idle or SessionVerdict.Ended)
+        {
+            Navigation.NavigateTo("/account/wygasnij", forceLoad: true);
+            return;
+        }
+
+        if (snapshot.Verdict == SessionVerdict.MustChangePassword)
+        {
+            Navigation.NavigateTo("/konto/haslo", forceLoad: true);
+            return;
+        }
+
+        var remaining = snapshot.Remaining(now);
+        if (remaining is null)
+        {
+            Label = null;
+        }
+        else
+        {
+            Urgent = remaining < TimeSpan.FromMinutes(1);
+            Label = "Bez ruchu sesja wygaśnie za " + Format(remaining.Value);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task Touch()
+    {
+        if (_disposed == 1)
+            return;
+
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastTouch < TimeSpan.FromSeconds(15))
+            return;
+
+        _lastTouch = now;
+        var state = await Authentication.GetAuthenticationStateAsync();
+        await Gate.EvaluateAsync(state.User, touch: true, now);
+        await CheckAsync();
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            return;
+
+        _cancel?.Cancel();
+        _cancel?.Dispose();
+        _timer?.Dispose();
+        _reference?.Dispose();
+    }
+
+    private static string Format(TimeSpan remaining)
+    {
+        if (remaining.TotalHours >= 1)
+            return $"{(int)remaining.TotalHours} h {remaining.Minutes:00} min";
+
+        if (remaining.TotalMinutes >= 1)
+            return $"{(int)remaining.TotalMinutes} min {remaining.Seconds:00} s";
+
+        return $"{Math.Max(0, (int)remaining.TotalSeconds)} s";
+    }
+}

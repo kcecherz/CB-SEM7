@@ -1,0 +1,97 @@
+@page "/logowanie"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout AuthLayout
+@inject IWebHostEnvironment Environment
+
+<PageTitle>Logowanie — Klucznik</PageTitle>
+
+<h1>Logowanie</h1>
+
+@if (Reason is not null)
+{
+    <p class="banner" role="status">@Reason</p>
+}
+
+@if (Failed)
+{
+    <p class="banner banner-bad" role="alert">@AuthService.FailureMessage</p>
+}
+
+<form method="post" action="/account/login" data-enhance="false">
+    <AntiforgeryToken />
+    <input type="hidden" name="powrot" value="@SafeReturn" />
+    <label>
+        Login
+        <input name="login" value="@LoginValue" autocomplete="username" maxlength="32" required />
+    </label>
+    <label>
+        Hasło
+        <input name="password" type="password" autocomplete="current-password" maxlength="128" required />
+    </label>
+    <button type="submit">Zaloguj</button>
+</form>
+
+@if (Cards.Count > 0)
+{
+    <h2>Konta testowe</h2>
+    <p>Hasło jednorazowe, cztery słowa, ważne 24 godziny. Przy pierwszym logowaniu trzeba je zmienić.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Login</th>
+                <th>Hasło</th>
+                <th>Rola</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var card in Cards)
+            {
+                <tr>
+                    <td>@card.Login</td>
+                    <td>@card.Password</td>
+                    <td>@card.Role</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "blad")]
+    private string? Blad { get; set; }
+
+    [SupplyParameterFromQuery(Name = "powod")]
+    private string? Powod { get; set; }
+
+    [SupplyParameterFromQuery(Name = "powrot")]
+    private string? Powrot { get; set; }
+
+    [SupplyParameterFromQuery(Name = "login")]
+    private string? LoginPrefill { get; set; }
+
+    private IReadOnlyList<IssuedCard> Cards { get; set; } = [];
+
+    private bool Failed => Blad == "1";
+
+    private string LoginValue =>
+        string.IsNullOrEmpty(LoginPrefill) || LoginPrefill.Length > LoginRules.MaximumLength
+            ? ""
+            : LoginPrefill;
+
+    private string SafeReturn => LocalRedirect.Normalize(Powrot);
+
+    private string? Reason => Powod switch
+    {
+        "bezczynnosc" => "Sesja wygasła po okresie bezczynności.",
+        "wylogowano" => "Zostałeś wylogowany. Sesja została unieważniona.",
+        "zakonczona" => "Sesja została zakończona.",
+        _ => null
+    };
+
+    protected override void OnInitialized()
+    {
+        var directory = Path.Combine(Environment.ContentRootPath, "App_Data");
+        Cards = BootstrapCards.Read(directory);
+    }
+}

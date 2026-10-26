@@ -1,0 +1,28 @@
+﻿@page "/Error"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout AuthLayout
+@using System.Diagnostics
+
+<PageTitle>Błąd — Klucznik</PageTitle>
+
+<h1>Coś poszło nie tak</h1>
+<p class="lead">Żądanie nie zostało dokończone. Spróbuj ponownie albo wróć do logowania.</p>
+
+@if (ShowRequestId)
+{
+    <p>Identyfikator żądania: <code>@RequestId</code></p>
+}
+
+<p><a class="btn btn-primary" href="/logowanie">Logowanie</a></p>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+    private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "dgSpecHash": "qyfunpRx/g0=",
+  "success": true,
+  "projectFilePath": "/Users/kacper/Documents/CB/LAB1/Klucznik.csproj",
+  "expectedPackageFiles": [
+    "/Users/kacper/.nuget/packages/isopoh.cryptography.argon2/2.0.0/isopoh.cryptography.argon2.2.0.0.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/isopoh.cryptography.blake2b/2.0.0/isopoh.cryptography.blake2b.2.0.0.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/isopoh.cryptography.securearray/2.0.0/isopoh.cryptography.securearray.2.0.0.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/microsoft.aspnetcore.app.internal.assets/10.0.7/microsoft.aspnetcore.app.internal.assets.10.0.7.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/microsoft.data.sqlite.core/10.0.13/microsoft.data.sqlite.core.10.0.13.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/microsoft.entityframeworkcore/10.0.13/microsoft.entityframeworkcore.10.0.13.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/microsoft.entityframeworkcore.abstractions/10.0.13/microsoft.entityframeworkcore.abstractions.10.0.13.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/microsoft.entityframeworkcore.analyzers/10.0.13/microsoft.entityframeworkcore.analyzers.10.0.13.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/microsoft.entityframeworkcore.relational/10.0.13/microsoft.entityframeworkcore.relational.10.0.13.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/microsoft.entityframeworkcore.sqlite/10.0.13/microsoft.entityframeworkcore.sqlite.10.0.13.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/microsoft.entityframeworkcore.sqlite.core/10.0.13/microsoft.entityframeworkcore.sqlite.core.10.0.13.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/microsoft.extensions.dependencymodel/10.0.13/microsoft.extensions.dependencymodel.10.0.13.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/sqlitepclraw.bundle_e_sqlite3/2.1.13/sqlitepclraw.bundle_e_sqlite3.2.1.13.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/sqlitepclraw.core/2.1.13/sqlitepclraw.core.2.1.13.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/sqlitepclraw.lib.e_sqlite3/2.1.13/sqlitepclraw.lib.e_sqlite3.2.1.13.nupkg.sha512",
+    "/Users/kacper/.nuget/packages/sqlitepclraw.provider.e_sqlite3/2.1.13/sqlitepclraw.provider.e_sqlite3.2.1.13.nupkg.sha512"
+  ],
+  "logs": []
+}

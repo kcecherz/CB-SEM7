@@ -1,0 +1,16 @@
+@inject NavigationManager Navigation
+
+<p class="lead">Przekierowanie do logowania…</p>
+<p><a href="@Target">Zaloguj się</a></p>
+
+@code {
+    private string Target { get; set; } = "/logowanie";
+
+    protected override void OnInitialized()
+    {
+        var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var back = string.IsNullOrEmpty(relative) ? "/" : "/" + relative;
+        Target = "/logowanie?powrot=" + Uri.EscapeDataString(LocalRedirect.Normalize(back));
+        Navigation.NavigateTo(Target, forceLoad: true);
+    }
+}

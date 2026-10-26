@@ -1,0 +1,289 @@
+@page "/admin/uzytkownicy"
+@attribute [Authorize(Policy = AccessCatalog.ManageUsers)]
+@rendermode InteractiveServer
+@inject UserAdminService Directory
+@inject SettingsService PolicySettings
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>Użytkownicy — Klucznik</PageTitle>
+
+<section class="page">
+    <h1>Użytkownicy</h1>
+    <p>Nowe konto dostaje hasło jednorazowe: cztery słowa, ważne 24 godziny. Hasło widać tylko teraz.</p>
+
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <p class="banner banner-bad" role="alert">@Error</p>
+    }
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <p class="banner banner-ok" role="status">@Message</p>
+    }
+    @if (Issued is not null)
+    {
+        <section class="card handoff">
+            <h2>Hasło jednorazowe dla @Issued.Login</h2>
+            <p>Ważne do @ClockFormat.Display(Issued.ExpiresAt). Przy pierwszym logowaniu trzeba je zmienić.</p>
+            <input class="otp" readonly value="@Issued.Password" />
+        </section>
+    }
+
+    <section class="card">
+        @if (Draft is null)
+        {
+            <h2>Nowe konto</h2>
+            <div class="split">
+                <label class="field">
+                    <span>Login</span>
+                    <input @bind="NewLogin" maxlength="32" />
+                </label>
+                <label class="field">
+                    <span>Rola</span>
+                    <select @bind="NewRole">
+                        @foreach (var role in AccessCatalog.Roles)
+                        {
+                            <option value="@role">@role</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <div class="actions">
+                <button class="btn btn-primary" type="button" @onclick="Create" disabled="@Busy">Utwórz i nadaj hasło</button>
+            </div>
+        }
+        else
+        {
+            <h2>Edycja @Draft.Login</h2>
+            <div class="split">
+                <label class="field">
+                    <span>Login</span>
+                    <input @bind="Draft.Login" maxlength="32" disabled="@Draft.Permanent" />
+                </label>
+                <label class="field">
+                    <span>Rola</span>
+                    <select @bind="Draft.Role" disabled="@Draft.Permanent">
+                        @foreach (var role in AccessCatalog.Roles)
+                        {
+                            <option value="@role">@role</option>
+                        }
+                    </select>
+                </label>
+            </div>
+            <div class="actions">
+                <button class="btn btn-primary" type="button" @onclick="SaveEdit" disabled="@Busy">Zapisz</button>
+                <button class="btn btn-ghost" type="button" @onclick="() => Draft = null">Anuluj</button>
+            </div>
+        }
+    </section>
+
+    <div class="table-wrap card">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Login</th>
+                    <th>Rola</th>
+                    <th>Konto</th>
+                    <th>Hasło</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Items)
+                {
+                    <tr class="@(user.IsBlocked ? "row-muted" : null)">
+                        <td>@user.Login</td>
+                        <td>@user.Role</td>
+                        <td>@AccountState(user)</td>
+                        <td>@PasswordState(user)</td>
+                        <td>
+                            <div class="row-actions">
+                                @if (!user.IsPermanentAdmin && user.Id != Me)
+                                {
+                                    <button class="btn btn-ghost btn-small" type="button" @onclick="() => BeginEdit(user)">Edytuj</button>
+                                    <button class="btn btn-ghost btn-small" type="button" @onclick="() => ToggleBlock(user)">
+                                        @(user.IsBlocked ? "Odblokuj" : "Zablokuj")
+                                    </button>
+                                }
+                                @if (user.Id != Me)
+                                {
+                                    @if (ConfirmResetId == user.Id)
+                                    {
+                                        <button class="btn btn-primary btn-small" type="button" @onclick="() => Reset(user.Id)">Nadaj hasło</button>
+                                        <button class="btn btn-ghost btn-small" type="button" @onclick="() => ConfirmResetId = null">Anuluj</button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-ghost btn-small" type="button" @onclick="() => ConfirmResetId = user.Id">Resetuj hasło</button>
+                                    }
+                                }
+                                @if (!user.IsPermanentAdmin && user.Id != Me)
+                                {
+                                    @if (ConfirmDeleteId == user.Id)
+                                    {
+                                        <button class="btn btn-danger btn-small" type="button" @onclick="() => Delete(user.Id)">Potwierdź</button>
+                                        <button class="btn btn-ghost btn-small" type="button" @onclick="() => ConfirmDeleteId = null">Anuluj</button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-danger btn-small" type="button" @onclick="() => ConfirmDeleteId = user.Id">Usuń</button>
+                                    }
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@code {
+    private IReadOnlyList<UserListItem> Items { get; set; } = [];
+    private SecuritySettings? Policy { get; set; }
+    private IssuedPassword? Issued { get; set; }
+    private EditDraft? Draft { get; set; }
+    private string NewLogin { get; set; } = "";
+    private string NewRole { get; set; } = AccessCatalog.Czytelnik;
+    private string? Error { get; set; }
+    private string? Message { get; set; }
+    private int? Me { get; set; }
+    private int? ConfirmDeleteId { get; set; }
+    private int? ConfirmResetId { get; set; }
+    private bool Busy { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await Authentication.GetAuthenticationStateAsync();
+        if (int.TryParse(state.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id))
+            Me = id;
+
+        Policy = await PolicySettings.GetAsync();
+        await Reload();
+    }
+
+    private async Task Reload() => Items = await Directory.ListAsync();
+
+    private async Task Create()
+    {
+        await Run(async principal =>
+        {
+            var result = await Directory.CreateAsync(principal, NewLogin, NewRole);
+            if (result.Succeeded)
+            {
+                NewLogin = "";
+                Issued = result.Issued;
+                Message = "Konto utworzone. Skopiuj hasło jednorazowe, zanim opuścisz stronę.";
+            }
+            return result;
+        });
+    }
+
+    private void BeginEdit(UserListItem user)
+    {
+        Error = null;
+        Message = null;
+        Draft = new EditDraft
+        {
+            Id = user.Id,
+            Login = user.Login,
+            Role = user.Role,
+            Permanent = user.IsPermanentAdmin,
+        };
+    }
+
+    private async Task SaveEdit()
+    {
+        if (Draft is null)
+            return;
+
+        var draft = Draft;
+        await Run(async principal =>
+        {
+            var result = await Directory.UpdateAsync(principal, draft.Id, draft.Login, draft.Role);
+            if (result.Succeeded)
+            {
+                Draft = null;
+                Message = "Zapisano dane konta.";
+            }
+            return result;
+        });
+    }
+
+    private Task ToggleBlock(UserListItem user) => Run(async principal =>
+    {
+        var result = await Directory.SetBlockedAsync(principal, user.Id, !user.IsBlocked);
+        if (result.Succeeded)
+            Message = user.IsBlocked ? "Konto odblokowane." : "Konto zablokowane.";
+        return result;
+    });
+
+    private Task Delete(int id) => Run(async principal =>
+    {
+        var result = await Directory.DeleteAsync(principal, id);
+        if (result.Succeeded)
+        {
+            ConfirmDeleteId = null;
+            Message = "Konto usunięte.";
+        }
+        return result;
+    });
+
+    private Task Reset(int id) => Run(async principal =>
+    {
+        var result = await Directory.ResetPasswordAsync(principal, id);
+        if (result.Succeeded)
+        {
+            ConfirmResetId = null;
+            Issued = result.Issued;
+            Message = "Nadano nowe hasło jednorazowe.";
+        }
+        return result;
+    });
+
+    private async Task Run(Func<System.Security.Claims.ClaimsPrincipal, Task<MutationResult>> action)
+    {
+        Busy = true;
+        Error = null;
+        Message = null;
+        var state = await Authentication.GetAuthenticationStateAsync();
+        var result = await action(state.User);
+        if (!result.Succeeded)
+            Error = result.Error;
+        await Reload();
+        Policy = await PolicySettings.GetAsync();
+        Busy = false;
+    }
+
+    private static string AccountState(UserListItem user)
+    {
+        if (user.IsPermanentAdmin)
+            return "Stałe konto ADMIN";
+        return user.IsBlocked ? "Zablokowane" : "Aktywne";
+    }
+
+    private string PasswordState(UserListItem user)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (user.IsOneTimePassword)
+        {
+            if (user.OneTimePasswordExpiresAt is { } until && until < now)
+                return "Jednorazowe wygasło";
+            return user.OneTimePasswordExpiresAt is { } live
+                ? $"Jednorazowe do {ClockFormat.Display(live)}"
+                : "Jednorazowe";
+        }
+
+        if (Policy is not null && PasswordRules.IsExpired(user.PasswordChangedAt, Policy.PasswordValidityDays, now))
+            return "Wygasło";
+
+        return user.MustChangePassword ? "Do zmiany" : "Ustawione przez użytkownika";
+    }
+
+    private sealed class EditDraft
+    {
+        public int Id { get; set; }
+        public string Login { get; set; } = "";
+        public string Role { get; set; } = AccessCatalog.Czytelnik;
+        public bool Permanent { get; set; }
+    }
+}

@@ -1,0 +1,13 @@
+﻿@page "/"
+@attribute [Authorize]
+
+<PageTitle>Konto — Klucznik</PageTitle>
+
+<h1>Konto</h1>
+
+<AuthorizeView>
+    <Authorized>
+        <p>Login: <strong>@context.User.Identity?.Name</strong></p>
+        <p>Rola: <strong>@context.User.FindFirstValue(ClaimTypes.Role)</strong></p>
+    </Authorized>
+</AuthorizeView>

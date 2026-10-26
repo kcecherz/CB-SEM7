@@ -1,0 +1,68 @@
+@page "/admin/ustawienia"
+@attribute [Authorize(Policy = AccessCatalog.ManageSecurityPolicy)]
+@rendermode InteractiveServer
+@inject SettingsService PolicySettings
+@inject AuthenticationStateProvider Authentication
+
+<PageTitle>Zasady — Klucznik</PageTitle>
+
+<section class="page narrow">
+    <h1>Zasady haseł i sesji</h1>
+    <p>Minimalna długość hasła to @PasswordPolicy.MinimumLength znaków. Zero dni oznacza brak terminu ważności.</p>
+
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <p class="banner banner-bad" role="alert">@Error</p>
+    }
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <p class="banner banner-ok" role="status">@Message</p>
+    }
+
+    <div class="stack card">
+        <label class="check">
+            <input type="checkbox" @bind="RejectSequences" />
+            <span>Odrzucaj sekwencje klawiaturowe i ciągi rosnące lub malejące (werty, asdf, 1234, abcd)</span>
+        </label>
+        <label class="field">
+            <span>Ważność hasła w dniach</span>
+            <input type="number" @bind="ValidityDays" min="0" max="365" />
+        </label>
+        <label class="field">
+            <span>Czas bezczynności sesji w minutach</span>
+            <input type="number" @bind="InactivityMinutes" min="@SessionRules.MinimumMinutes" max="@SessionRules.MaximumMinutes" />
+        </label>
+        <div class="actions">
+            <button class="btn btn-primary" type="button" @onclick="Save" disabled="@Busy">Zapisz zasady</button>
+        </div>
+    </div>
+</section>
+
+@code {
+    private bool RejectSequences { get; set; }
+    private int ValidityDays { get; set; }
+    private int InactivityMinutes { get; set; } = SessionRules.DefaultMinutes;
+    private string? Error { get; set; }
+    private string? Message { get; set; }
+    private bool Busy { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var settings = await PolicySettings.GetAsync();
+        RejectSequences = settings.RejectSequences;
+        ValidityDays = settings.PasswordValidityDays;
+        InactivityMinutes = settings.SessionInactivityMinutes;
+    }
+
+    private async Task Save()
+    {
+        Busy = true;
+        Error = null;
+        Message = null;
+        var state = await Authentication.GetAuthenticationStateAsync();
+        Error = await PolicySettings.UpdateAsync(state.User, RejectSequences, ValidityDays, InactivityMinutes);
+        if (Error is null)
+            Message = "Zapisano.";
+        Busy = false;
+    }
+}

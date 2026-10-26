@@ -1,0 +1,52 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="bar">
+    <strong>Klucznik</strong>
+    <AuthorizeView>
+        <Authorized>
+            <nav aria-label="Główne">
+                <a class="@Active("/")" href="/">Konto</a>
+                <a class="@Active("/konto/haslo")" href="/konto/haslo">Zmień hasło</a>
+                <AuthorizeView Policy="@AccessCatalog.ManageUsers" Context="users">
+                    <Authorized>
+                        <a class="@Active("/admin/uzytkownicy")" href="/admin/uzytkownicy">Użytkownicy</a>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="@AccessCatalog.ManageSecurityPolicy" Context="policy">
+                    <Authorized>
+                        <a class="@Active("/admin/ustawienia")" href="/admin/ustawienia">Zasady</a>
+                    </Authorized>
+                </AuthorizeView>
+                <a href="/wyloguj">Wyloguj</a>
+            </nav>
+            <span class="who">@context.User.Identity?.Name, @context.User.FindFirstValue(ClaimTypes.Role)</span>
+            <InactivityGuard />
+        </Authorized>
+    </AuthorizeView>
+</header>
+<main id="tresc" class="sheet">
+    @Body
+</main>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Połączenie z aplikacją zostało przerwane.
+    <a href="." class="reload">Odśwież</a>
+    <span class="dismiss">×</span>
+</div>
+
+@code {
+    private string Active(string href)
+    {
+        var path = "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
+        var query = path.IndexOf('?');
+        if (query >= 0)
+            path = path[..query];
+
+        var on = href == "/"
+            ? path == "/"
+            : path.StartsWith(href, StringComparison.OrdinalIgnoreCase);
+        return on ? "is-on" : "";
+    }
+}

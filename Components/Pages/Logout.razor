@@ -1,0 +1,15 @@
+@page "/wyloguj"
+@attribute [Authorize]
+@attribute [ExcludeFromInteractiveRouting]
+@layout AuthLayout
+
+<PageTitle>Wylogowanie — Klucznik</PageTitle>
+
+<h1>Wylogowanie</h1>
+<p>Wylogowanie unieważnia bieżącą sesję.</p>
+
+<form method="post" action="/account/wyloguj" data-enhance="false">
+    <AntiforgeryToken />
+    <button type="submit">Wyloguj</button>
+    <a href="/">Zostań</a>
+</form>

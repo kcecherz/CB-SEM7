@@ -1,0 +1,23 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                @if (context.User.Identity?.IsAuthenticated == true)
+                {
+                    <section class="page">
+                        <h1>Brak uprawnień</h1>
+                        <p class="lead">Twoja rola nie pozwala otworzyć tej strony.</p>
+                        <a class="btn btn-primary" href="/">Wróć do pulpitu</a>
+                    </section>
+                }
+                else
+                {
+                    <RedirectToLogin />
+                }
+            </NotAuthorized>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>

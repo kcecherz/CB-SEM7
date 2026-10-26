@@ -1,0 +1,8 @@
+﻿# Karty haseł jednorazowych z pierwszego uruchomienia.
+# Baza przechowuje wyłącznie skróty Argon2id. Ten plik jest jednorazowym wydaniem haseł.
+# login<TAB>hasło<TAB>rola<TAB>ważneDo
+ADMIN	brama-chmura-jezioro-las	Administrator	2026-10-26T14:02:46.9136820+00:00
+anna	komin-atrament-dąb-drzwi	Redaktor	2026-10-26T14:02:46.9136820+00:00
+bartek	słońce-mapa-droga-góra	Redaktor	2026-10-26T14:02:46.9136820+00:00
+celina	mąka-atrament-wiatr-miedź	Czytelnik	2026-10-26T14:02:46.9136820+00:00
+dawid	ścieżka-deszcz-zima-brama	Czytelnik	2026-10-26T14:02:46.9136820+00:00
